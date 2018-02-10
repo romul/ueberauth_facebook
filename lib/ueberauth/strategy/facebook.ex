@@ -57,6 +57,20 @@ defmodule Ueberauth.Strategy.Facebook do
     end
   end
 
+  def handle_callback!(%Plug.Conn{params: %{"token" => access_token}} = conn) do
+    token = OAuth2.AccessToken.new(access_token)
+    opts = [redirect_uri: callback_url(conn), token: token]
+    client = Ueberauth.Strategy.Facebook.OAuth.client(opts)
+
+    if token.access_token == nil do
+      err = token.other_params["error"]
+      desc = token.other_params["error_description"]
+      set_errors!(conn, [error(err, desc)])
+    else
+      fetch_user(conn, client)
+    end
+  end
+
   @doc false
   def handle_callback!(conn) do
     set_errors!(conn, [error("missing_code", "No code received")])
